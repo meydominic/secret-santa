@@ -47,6 +47,7 @@ class _MyHomePageState extends State<MyHomePage> {
             event.isKeyPressed(LogicalKeyboardKey.arrowUp)) {
           String name = _names.removeLast();
           nameTextFieldController.text = name;
+          nameTextFieldFocusNode.requestFocus();
           setState(() {});
           return KeyEventResult.handled;
         }
@@ -139,6 +140,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 onPressed: () {
                   String removedName = _names.removeAt(index);
                   nameTextFieldController.text = removedName;
+                  nameTextFieldFocusNode.requestFocus();
                   setState(() {});
                 },
                 icon: const Icon(Icons.edit)),
