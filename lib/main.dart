@@ -33,6 +33,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final List<String> _names = [];
+  final List<String> _combinations = [];
 
   TextEditingController nameTextFieldController = TextEditingController();
   late FocusNode nameTextFieldFocusNode;
@@ -63,65 +64,95 @@ class _MyHomePageState extends State<MyHomePage> {
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
           title: Text(widget.title),
         ),
-        body: SingleChildScrollView(
-          child: Row(
+        body: OrientationBuilder(builder: (context, orientation) {
+          return GridView.count(
+            physics: const ScrollPhysics(),
+            crossAxisCount: orientation == Orientation.portrait ? 1 : 2,
             children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    DataTable(
-                        showBottomBorder: true,
-                        columns: const <DataColumn>[
-                          DataColumn(label: Text('Name')),
-                          DataColumn(label: Text('Exclude')),
-                          DataColumn(label: Text('Action')),
-                        ],
-                        rows: _buildRows()),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.25,
-                      child: TextField(
-                        controller: nameTextFieldController,
-                        focusNode: nameTextFieldFocusNode,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: 'Enter a name',
-                        ),
-                        onSubmitted: (value) {
-                          _names.add(value);
-                          nameTextFieldController.clear();
-                          nameTextFieldFocusNode.requestFocus();
-                          setState(() {});
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    DataTable(
-                        showBottomBorder: true,
-                        columns: const <DataColumn>[
-                          DataColumn(label: Text('Combination'))
-                        ],
-                        rows: _buildCombinations()),
-                    ElevatedButton(
-                      child: const Text('Reroll'),
-                      onPressed: () {
-                        setState(() {});
-                      },
-                    ),
-                  ],
-                ),
-              )
+              _buildNameAdministrationBlock(context),
+              _buildCombinationsBlock(context),
             ],
-          ),
-        ));
+          );
+        }));
   }
 
+  Widget _buildNameAdministrationBlock(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        DataTable(
+            showBottomBorder: true,
+            columns: const <DataColumn>[
+              DataColumn(label: Expanded(child: Text('Name'))),
+              DataColumn(label: Expanded(child: Text('Exclude'))),
+              DataColumn(label: Expanded(child: Text('Action'))),
+            ],
+            rows: _buildRows()),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 100.0),
+          child: TextField(
+            controller: nameTextFieldController,
+            focusNode: nameTextFieldFocusNode,
+            autofocus: true,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'Enter a name',
+            ),
+            onSubmitted: (value) {
+              _onAddNewName(name: value);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCombinationsBlock(BuildContext context) {
+    return Column(
+      children: [
+        Center(
+          child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _combinations.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  tileColor: index % 2 == 0
+                      ? const Color.fromARGB(255, 224, 228, 233)
+                      : Colors.white,
+                  title: Text(_combinations[index]),
+                );
+              }),
+        ),
+        ElevatedButton(
+          child: const Text('Reroll'),
+          onPressed: () {
+            _buildCombinations();
+            setState(() {});
+          },
+        )
+      ],
+    );
+  }
+
+  /// Outsourced function when adding new names.
+  void _onAddNewName({required String name}) {
+    if (name.trim().isEmpty) {
+      return;
+    }
+
+    if (_names.contains(name)) {
+      // TODO: add error msg or toast
+      return;
+    }
+
+    _names.add(name);
+    _buildCombinations();
+    nameTextFieldController.clear();
+    nameTextFieldFocusNode.requestFocus();
+    setState(() {});
+  }
+
+  /// Builds the data table with names.
   List<DataRow> _buildRows() {
     List<DataRow> rows = [];
 
@@ -137,20 +168,26 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             // Edit entry
             IconButton(
-                onPressed: () {
-                  String removedName = _names.removeAt(index);
-                  nameTextFieldController.text = removedName;
-                  nameTextFieldFocusNode.requestFocus();
-                  setState(() {});
-                },
-                icon: const Icon(Icons.edit)),
+              onPressed: () {
+                String removedName = _names.removeAt(index);
+                nameTextFieldController.text = removedName;
+                nameTextFieldFocusNode.requestFocus();
+                _buildCombinations();
+                setState(() {});
+              },
+              icon: const Icon(Icons.edit),
+              tooltip: 'Edit entry',
+            ),
             // Delete entry
             IconButton(
-                onPressed: () {
-                  _names.removeAt(index);
-                  setState(() {});
-                },
-                icon: const Icon(Icons.delete)),
+              onPressed: () {
+                _names.removeAt(index);
+                _buildCombinations();
+                setState(() {});
+              },
+              icon: const Icon(Icons.delete),
+              tooltip: 'Delete entry',
+            ),
           ],
         )),
       ]);
@@ -161,6 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return rows;
   }
 
+  /// Builds the drop down widget with names to exclude.
   List<DropdownMenuItem<String>> _buildDropDownList(
       {required String excludeName}) {
     List<DropdownMenuItem<String>> dropDownList = [];
@@ -182,28 +220,26 @@ class _MyHomePageState extends State<MyHomePage> {
     return dropDownList;
   }
 
-  List<DataRow> _buildCombinations() {
-    List<DataRow> combinations = [];
-
+  /// Builds the data table with combinations for gifting.
+  void _buildCombinations() {
     if (_names.length < 2) {
-      return combinations;
+      return;
     }
 
     List<String> shuffledNames = List.from(_names);
     shuffledNames.shuffle();
 
+    _combinations.clear();
+
     for (final (index, name) in shuffledNames.indexed) {
       String combination;
       if (index == (shuffledNames.length - 1)) {
-        combination = '$name --> ${shuffledNames.first}';
+        combination = '$name ⟶ ${shuffledNames.first}';
       } else {
-        combination = '$name --> ${shuffledNames.elementAt(index + 1)}';
+        combination = '$name ⟶ ${shuffledNames.elementAt(index + 1)}';
       }
 
-      DataRow dataRow = DataRow(cells: [DataCell(Text(combination))]);
-      combinations.add(dataRow);
+      _combinations.add(combination);
     }
-
-    return combinations;
   }
 }
