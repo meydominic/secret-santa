@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:secret_santa/selection_dropdown_item.dart';
@@ -59,49 +61,74 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    bool landscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
           title: Text(widget.title),
         ),
-        body: OrientationBuilder(builder: (context, orientation) {
-          return GridView.count(
-            physics: const ScrollPhysics(),
-            crossAxisCount: orientation == Orientation.portrait ? 1 : 2,
-            children: [
-              _buildNameAdministrationBlock(context),
-              _buildCombinationsBlock(context),
-            ],
-          );
-        }));
+        body: Row(
+          children: [
+            Container(
+              width: screenWidth / 2,
+              child: _buildNameAdministrationBlock(context),
+            ),
+            Container(
+                width: screenWidth / 2,
+                child: _buildCombinationsBlock(context)),
+          ],
+        )
+
+        // landscape
+        // ? Row(
+        //     children: [
+        //       _buildNameAdministrationBlock(context),
+        //       _buildCombinationsBlock(context),
+        //     ],
+        //   )
+        // : Column(
+        //     children: [
+        //       _buildNameAdministrationBlock(context),
+        //       _buildCombinationsBlock(context),
+        //     ],
+        //   )
+        );
   }
 
   Widget _buildNameAdministrationBlock(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        DataTable(
-            showBottomBorder: true,
-            columns: const <DataColumn>[
-              DataColumn(label: Expanded(child: Text('Name'))),
-              DataColumn(label: Expanded(child: Text('Exclude'))),
-              DataColumn(label: Expanded(child: Text('Action'))),
-            ],
-            rows: _buildRows()),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 100.0),
-          child: TextField(
-            controller: nameTextFieldController,
-            focusNode: nameTextFieldFocusNode,
-            autofocus: true,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'Enter a name',
-            ),
-            onSubmitted: (value) {
-              _onAddNewName(name: value);
-            },
+        Expanded(
+          child: InteractiveViewer(
+            constrained: false,
+            child: DataTable(
+                horizontalMargin: 0,
+                columnSpacing: 0,
+                showBottomBorder: true,
+                columns: const <DataColumn>[
+                  DataColumn(label: Text('###Name')),
+                  DataColumn(label: Text('###Exclude')),
+                  DataColumn(label: Text('###Action')),
+                ],
+                rows: _buildRows(context)),
           ),
+        ),
+        TextField(
+          controller: nameTextFieldController,
+          focusNode: nameTextFieldFocusNode,
+          autofocus: true,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: '###Enter a name',
+          ),
+          onSubmitted: (value) {
+            _onAddNewName(name: value);
+          },
         ),
       ],
     );
@@ -124,7 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
               }),
         ),
         ElevatedButton(
-          child: const Text('Reroll'),
+          child: const Text('###Reroll'),
           onPressed: () {
             _buildCombinations();
             setState(() {});
@@ -153,42 +180,53 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   /// Builds the data table with names.
-  List<DataRow> _buildRows() {
+  List<DataRow> _buildRows(BuildContext context) {
     List<DataRow> rows = [];
+
+    double displayWidth = MediaQuery.of(context).size.width;
+
+    const double actionCellWidth = 80.0;
+    final double nameCellWidth = ((displayWidth / 2) - actionCellWidth) * 0.5;
 
     for (final (index, name) in _names.indexed) {
       DataRow dataRow = DataRow(cells: [
-        DataCell(Text(name)),
-        DataCell(DropdownButton<String>(
-          items: _buildDropDownList(excludeName: name),
-          onChanged: (Object? value) {},
-          value: null,
+        DataCell(SizedBox(width: nameCellWidth, child: Text(name))),
+        DataCell(SizedBox(
+          width: nameCellWidth,
+          child: DropdownButton<String>(
+            items: _buildDropDownList(excludeName: name),
+            onChanged: (Object? value) {},
+            value: null,
+          ),
         )),
-        DataCell(Row(
-          children: [
-            // Edit entry
-            IconButton(
-              onPressed: () {
-                String removedName = _names.removeAt(index);
-                nameTextFieldController.text = removedName;
-                nameTextFieldFocusNode.requestFocus();
-                _buildCombinations();
-                setState(() {});
-              },
-              icon: const Icon(Icons.edit),
-              tooltip: 'Edit entry',
-            ),
-            // Delete entry
-            IconButton(
-              onPressed: () {
-                _names.removeAt(index);
-                _buildCombinations();
-                setState(() {});
-              },
-              icon: const Icon(Icons.delete),
-              tooltip: 'Delete entry',
-            ),
-          ],
+        DataCell(SizedBox(
+          width: actionCellWidth,
+          child: Row(
+            children: [
+              // Edit entry
+              IconButton(
+                onPressed: () {
+                  String removedName = _names.removeAt(index);
+                  nameTextFieldController.text = removedName;
+                  nameTextFieldFocusNode.requestFocus();
+                  _buildCombinations();
+                  setState(() {});
+                },
+                icon: const Icon(Icons.edit),
+                tooltip: '###Edit entry',
+              ),
+              // Delete entry
+              IconButton(
+                onPressed: () {
+                  _names.removeAt(index);
+                  _buildCombinations();
+                  setState(() {});
+                },
+                icon: const Icon(Icons.delete),
+                tooltip: '###Delete entry',
+              ),
+            ],
+          ),
         )),
       ]);
 
