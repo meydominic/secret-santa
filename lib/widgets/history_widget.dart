@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../models/secret_santa_history.dart';
 import '../providers/secret_santa_provider.dart';
+import 'common.dart';
+import 'history_tile.dart'; // New reusable tile widget
 
 /// Widget displaying draw history (up to 100 entries) with expandable match preview and load option.
 class HistoryWidget extends ConsumerWidget {
@@ -23,75 +25,150 @@ class HistoryWidget extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final history = ref.watch(secretSantaProvider.select((s) => s.history));
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.history, color: Colors.deepPurple),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${l10n.translate('history')} (${history.length}/100)',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
-                ),
-                if (history.isNotEmpty)
-                  TextButton.icon(
-                    onPressed: () {
-                      ref.read(secretSantaProvider.notifier).clearHistory();
-                    },
-                    icon: const Icon(Icons.delete_sweep, size: 18),
-                    label: Text(l10n.translate('clearHistory')),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.redAccent,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (history.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text(
-                    l10n.translate('noHistoryYet'),
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
-              )
-            else
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 400),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: history.length,
-                  separatorBuilder: (context, index) => const Divider(),
-                  itemBuilder: (context, index) {
-                    final entry = history[index];
-                    return _ExpandableHistoryTile(
-                      entry: entry,
-                      formattedDate: _formatDateTime(entry.timestamp),
-                    );
-                  },
-                ),
+    return cardContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with Icon and Title
+          RowWithSpacing(
+            children: [
+              const Icon(Icons.history, color: Colors.deepPurple),
+              const SizedBox(width: 8),
+              TextWithStyling(
+                text: '${l10n.translate('history')} (${history.length}/100)',
+                bold: true,
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Clear History Button
+          if (history.isNotEmpty) ...[
+            TextButtonWithMaterial3(
+              onPressed: () {
+                ref.read(secretSantaProvider.notifier).clearHistory();
+              },
+              icon: const Icon(Icons.delete_sweep, size: 18),
+              label: l10n.translate('clearHistory'),
+              color: Colors.redAccent,
+            ),
           ],
-        ),
+          const SizedBox(height: 16),
+          // Empty State or History List
+          history.isEmpty
+              ? ContainerWithDecoration(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade900
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextWithStyling(
+                    text: l10n.translate('noHistoryYet'),
+                    color: Colors.grey,
+                  ),
+                )
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  child: listWithSeparators(
+                    itemBuilder: (context, index) {
+                      final entry = history[index];
+                      return historyTile(
+                        entry: entry,
+                        formattedDate: _formatDateTime(entry.timestamp),
+                      );
+                    },
+                    itemCount: history.length,
+                  ),
+                ),
+        ],
       ),
     );
   }
 }
+
+/// Reusable widget for displaying a single history entry with expandable match preview and load option.
+/// 
+/// @param entry - The SecretSantaHistoryEntry instance to display
+/// @param formattedDate - The formatted date string
+/// @param onExpand - Optional callback when tile is expanded
+/// @param onLoad - Optional callback when load button is pressed
+historyTile({
+  required SecretSantaHistoryEntry entry,
+  required String formattedDate,
+  VoidCallback? onExpand,
+  VoidCallback? onLoad,
+}) {
+  final l10n = AppLocalizations.of(context);
+
+  return listWithSeparators(
+    itemBuilder: (context, _) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Column(
+          children: [
+            // ListTile for the history entry
+            ListTileWithSpacing(
+              title: TextWithStyling(
+                text: entry.title,
+                bold: true,
+              ),
+              subtitle: TextWithStyling(
+                text: '${formattedDate} • ${entry.matches.length} ${l10n.translate('pairs')}',
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+              trailing: RowWithSpacing(
+                spacing: 8,
+                children: [
+                  IconButtonWithTooltip(
+                    icon: Icon(Icons.keyboard_arrow_down),
+                    tooltip: 'Expand',
+                    onPressed: onExpand ?? () {},
+                  ),
+                  ElevatedButtonWithMaterial3(
+                    onPressed: onLoad ?? () {},
+                    label: l10n.translate('load'),
+                    backgroundColor: Colors.deepPurple.shade50,
+                    foregroundColor: Colors.deepPurple,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+    itemCount: 1,
+  );
+}
+
+/// Reusable widget for a ListTile with spacing and styling.
+/// 
+/// @param title - The title widget
+/// @param subtitle - The subtitle widget
+/// @param trailing - The trailing widget
+/// @param leading - Optional leading widget
+/// @param onTap - Optional tap callback
+/// @param padding - Optional padding
+ListTileWithSpacing({
+  required Widget title,
+  required Widget subtitle,
+  required Widget trailing,
+  Widget? leading,
+  VoidCallback? onTap,
+  EdgeInsets? padding,
+}) {
+  return ListTile(
+    leading: leading,
+    title: title,
+    subtitle: subtitle,
+    trailing: trailing,
+    onTap: onTap,
+    contentPadding: padding,
+  );
+}
+
 
 class _ExpandableHistoryTile extends ConsumerStatefulWidget {
   final SecretSantaHistoryEntry entry;

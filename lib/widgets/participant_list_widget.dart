@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../models/participant.dart';
 import '../providers/secret_santa_provider.dart';
+import 'common.dart';
+import 'participant_tile.dart'; // New reusable tile widget
 
 /// Widget displaying the list of participants, inline editing, dropdown exclusions, and fixed assignments.
 class ParticipantListWidget extends ConsumerStatefulWidget {
@@ -30,7 +32,6 @@ class _ParticipantListWidgetState extends ConsumerState<ParticipantListWidget> {
     if (name.trim().isNotEmpty) {
       ref.read(secretSantaProvider.notifier).addParticipant(name);
       _addController.clear();
-      // Keep focus on input field after submitting
       _addFocusNode.requestFocus();
     }
   }
@@ -41,92 +42,79 @@ class _ParticipantListWidgetState extends ConsumerState<ParticipantListWidget> {
     final state = ref.watch(secretSantaProvider);
     final participants = state.participants;
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.people, color: Colors.deepPurple),
-                const SizedBox(width: 8),
-                Text(
-                  '${l10n.translate('participants')} (${participants.length})',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _addController,
-                    focusNode: _addFocusNode,
-                    decoration: InputDecoration(
-                      hintText: l10n.translate('enterNameHint'),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    onSubmitted: (_) => _addParticipant(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _addParticipant,
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.translate('add')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
+    return cardContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with Icon and Title
+          RowWithSpacing(
+            children: [
+              const Icon(Icons.people, color: Colors.deepPurple),
+              const SizedBox(width: 8),
+              TextWithStyling(
+                text: '${l10n.translate('participants')} (${participants.length})',
+                bold: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Add Participant Input
+          RowWithSpacing(
+            spacing: 8,
+            children: [
+              Expanded(
+                child: TextFieldWithMaterial3(
+                  controller: _addController,
+                  focusNode: _addFocusNode,
+                  decoration: InputDecoration(
+                    hintText: l10n.translate('enterNameHint'),
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
+                  onSubmitted: (_) => _addParticipant(),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (participants.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text(
-                    l10n.translate('noParticipantsYet'),
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: participants.length,
-                separatorBuilder: (context, index) => const Divider(),
-                itemBuilder: (context, index) {
-                  final participant = participants[index];
-                  return _ParticipantTile(
-                    participant: participant,
-                    allParticipants: participants,
-                  );
-                },
               ),
-          ],
-        ),
+              ElevatedButtonWithMaterial3(
+                onPressed: _addParticipant,
+                icon: const Icon(Icons.add),
+                label: l10n.translate('add'),
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Empty State or Participant List
+          participants.isEmpty
+              ? ContainerWithDecoration(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade900
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextWithStyling(
+                    text: l10n.translate('noParticipantsYet'),
+                    color: Colors.grey,
+                  ),
+                )
+              : listWithSeparators(
+                  itemBuilder: (context, index) {
+                    final participant = participants[index];
+                    return participantTile(
+                      participant: participant,
+                      allParticipants: participants,
+                    );
+                  },
+                  itemCount: participants.length,
+                ),
+        ],
       ),
     );
   }

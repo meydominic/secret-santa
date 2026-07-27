@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/secret_santa_provider.dart';
 import 'providers/settings_provider.dart';
+import 'widgets/common.dart';
 import 'widgets/history_widget.dart';
 import 'widgets/import_export_widget.dart';
 import 'widgets/match_results_widget.dart';
 import 'widgets/participant_list_widget.dart';
+import 'widgets/wrap_with_spacing.dart';
 
 void main() {
   runApp(
@@ -39,7 +41,7 @@ class SecretSantaApp extends ConsumerWidget {
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           centerTitle: true,
           elevation: 0,
           backgroundColor: Colors.deepPurple,
@@ -98,31 +100,27 @@ class SecretSantaHomePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
+        title: RowWithSpacing(
+          spacing: 8,
           children: [
             const Icon(Icons.card_giftcard),
-            const SizedBox(width: 8),
-            Text(
-              l10n.translate('appTitle'),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            TextWithStyling(
+              text: l10n.translate('appTitle'),
+              bold: true,
             ),
           ],
         ),
         actions: [
           // Language toggle button
-          IconButton(
-            icon: Row(
-              mainAxisSize: MainAxisSize.min,
+          IconButtonWithTooltip(
+            icon: RowWithSpacing(
+              spacing: 4,
               children: [
                 const Icon(Icons.language, size: 20),
-                const SizedBox(width: 4),
-                Text(
-                  currentLocale.languageCode.toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                TextWithStyling(
+                  text: currentLocale.languageCode.toUpperCase(),
+                  fontSize: 12,
+                  bold: true,
                 ),
               ],
             ),
@@ -132,8 +130,11 @@ class SecretSantaHomePage extends ConsumerWidget {
             },
           ),
           // Theme toggle button
-          IconButton(
-            icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
+          IconButtonWithTooltip(
+            icon: Icon(
+              isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              color: Colors.white,
+            ),
             tooltip: l10n.translate('themeTooltip'),
             onPressed: () {
               ref.read(themeModeProvider.notifier).toggleTheme(context);
@@ -149,13 +150,12 @@ class SecretSantaHomePage extends ConsumerWidget {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1200),
-                  child: Column(
+                  child: ColumnWithSpacing(
+                    spacing: 24,
                     children: [
                       // Real-time or Action Error Display
                       if (activeErrorKey != null) ...[
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 20),
+                        ContainerWithDecoration(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: isDarkMode
@@ -168,22 +168,20 @@ class SecretSantaHomePage extends ConsumerWidget {
                                   : Colors.red.shade400,
                             ),
                           ),
-                          child: Row(
+                          child: RowWithSpacing(
+                            spacing: 12,
                             children: [
                               Icon(Icons.warning_amber_rounded,
                                   color: isDarkMode
                                       ? Colors.red.shade200
                                       : Colors.red.shade800),
-                              const SizedBox(width: 12),
                               Expanded(
-                                child: Text(
-                                  l10n.translate(activeErrorKey),
-                                  style: TextStyle(
-                                    color: isDarkMode
-                                        ? Colors.red.shade200
-                                        : Colors.red.shade900,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                child: TextWithStyling(
+                                  text: l10n.translate(activeErrorKey),
+                                  bold: true,
+                                  color: isDarkMode
+                                      ? Colors.red.shade200
+                                      : Colors.red.shade900,
                                 ),
                               ),
                             ],
@@ -191,7 +189,7 @@ class SecretSantaHomePage extends ConsumerWidget {
                         ),
                       ],
                       // Reroll / Generate Action Bar
-                      Container(
+                      ContainerWithDecoration(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -210,33 +208,28 @@ class SecretSantaHomePage extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: RowWithSpacing(
+                          spacing: 12,
                           children: [
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: ColumnWithSpacing(
+                                spacing: 4,
                                 children: [
-                                  Text(
-                                    l10n.translate('readyForSecretSanta'),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  TextWithStyling(
+                                    text: l10n.translate('readyForSecretSanta'),
+                                    bold: true,
+                                    color: Colors.white,
+                                    fontSize: 18,
                                   ),
-                                  Text(
-                                    l10n.translate('generateMatchesSubtitle'),
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 13,
-                                    ),
+                                  TextWithStyling(
+                                    text: l10n.translate('generateMatchesSubtitle'),
+                                    color: Colors.white70,
+                                    fontSize: 13,
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            ElevatedButton.icon(
+                            ElevatedButtonWithMaterial3(
                               onPressed: (state.participants.length < 2 ||
                                       hasValidationError)
                                   ? null
@@ -246,61 +239,47 @@ class SecretSantaHomePage extends ConsumerWidget {
                                           .generateMatches(l10n);
                                     },
                               icon: const Icon(Icons.autorenew),
-                              label: Text(l10n.translate('drawSecretSanta')),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.amber.shade700,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 4,
-                              ),
+                              label: l10n.translate('drawSecretSanta'),
+                              backgroundColor: Colors.amber.shade700,
+                              foregroundColor: Colors.white,
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
 
                       // Import / Export Section Card
                       const ImportExportWidget(),
-                      const SizedBox(height: 24),
 
                       // Responsive Grid: Desktop (2 columns), Mobile (1 column)
                       LayoutBuilder(
                         builder: (context, constraints) {
                           if (constraints.maxWidth > 800) {
-                            return const Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            return RowWithSpacing(
+                              spacing: 24,
                               children: [
                                 Expanded(
                                   flex: 1,
-                                  child: Column(
+                                  child: ColumnWithSpacing(
+                                    spacing: 24,
                                     children: [
-                                      ParticipantListWidget(),
-                                      SizedBox(height: 24),
-                                      HistoryWidget(),
+                                      const ParticipantListWidget(),
+                                      const HistoryWidget(),
                                     ],
                                   ),
                                 ),
-                                SizedBox(width: 24),
                                 Expanded(
                                   flex: 1,
-                                  child: MatchResultsWidget(),
+                                  child: const MatchResultsWidget(),
                                 ),
                               ],
                             );
                           } else {
-                            return const Column(
+                            return ColumnWithSpacing(
+                              spacing: 24,
                               children: [
-                                ParticipantListWidget(),
-                                SizedBox(height: 24),
-                                MatchResultsWidget(),
-                                SizedBox(height: 24),
-                                HistoryWidget(),
+                                const ParticipantListWidget(),
+                                const MatchResultsWidget(),
+                                const HistoryWidget(),
                               ],
                             );
                           }
